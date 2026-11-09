@@ -129,6 +129,18 @@ class RadioWidget(QFrame):
         self.play_button.setText("Play")
         self._set_status(f"{self.state.station.name} is offline - try another station")
 
+    def start(self):
+        if not self.playing:
+            self.toggle()
+
+    def stop(self):
+        if self.playing:
+            self.toggle()
+
+    def is_live(self) -> bool:
+        return self.player is not None and self.playing and self.player.mediaStatus() in (
+            QMediaPlayer.MediaStatus.BufferingMedia, QMediaPlayer.MediaStatus.BufferedMedia)
+
     def shutdown(self):
         if self.player is not None:
             self.player.stop()

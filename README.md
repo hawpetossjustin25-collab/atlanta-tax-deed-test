@@ -24,6 +24,7 @@
 - Miss a question and the right answer and explanation are shown for 8 seconds, then the next question comes up.
 - Radio player bar at the bottom (desktop and phone): V-103, Hot 107.9 and Majic 107.5/97.5 live streams, with play/stop, previous/next station, a station list and volume. Your station and volume are remembered. 95.5 The Beat is no longer on the air, so Majic is included as the R&B substitute.
 - Stand-alone **Atlanta Radio** app with just the stations: `python -m atl_tax_deed_test.radio_app` (it shares the saved station and volume with the test).
+  - **Alarm clock:** tick *Alarm on*, set the time and station. It plays that station daily at that time, with Snooze (9 min) and Stop. If the stream can't be reached within 20 seconds it beeps instead. On Windows it also registers the scheduled task *Atlanta Radio Alarm* (wake-to-run) so the alarm still goes off when the app is closed or the laptop is asleep (wake timers must be allowed; keep it plugged in).
 - Missed questions come back first, then unseen ones, then ones you know. Progress is saved.
 - Wrong Answers tab with explanations, CSV export, Study Guide tab.
 
