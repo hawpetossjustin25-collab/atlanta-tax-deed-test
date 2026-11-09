@@ -13,7 +13,7 @@ authors = [{name = "hawpetossjustin25-collab"}]
 dependencies = ["PyQt6>=6.0.0"]
 
 [project.optional-dependencies]
-test = ["pytest>=7"]
+test = ["pytest>=7", "certifi"]
 
 [project.scripts]
 atl-tax-deed-test = "atl_tax_deed_test.app:main"
