@@ -22,3 +22,12 @@ def test_no_script_breakout():
     bank[0]["question"] = "</script><b>x"
     html = render_html(bank)
     assert html.count("</script>") == 1
+
+
+def test_web_radio_matches_station_list():
+    from atl_tax_deed_test.radio import STATIONS
+    html = render_html(build_bank())
+    data = json.loads(re.search(r"const STATIONS=(\[.*?\]);", html).group(1))
+    assert [d["n"] for d in data] == [s.name for s in STATIONS]
+    assert [d["u"] for d in data] == [list(s.urls) for s in STATIONS]
+    assert html.index('id="radio"') < html.index("<script>")

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from atl_tax_deed_test.engine import MAX_WRONG, REVEAL_SECONDS
 from atl_tax_deed_test.question_bank import build_bank
+from atl_tax_deed_test.radio import DEFAULT_VOLUME, stations_json
 
 TEMPLATE = r"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
@@ -15,7 +16,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <meta name="theme-color" content="#1f8a4c"><title>Atlanta Tax Deed Test Practice</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,Segoe UI,Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;min-height:100vh}
+body{font-family:-apple-system,Segoe UI,Arial,sans-serif;background:#1e1e1e;color:#e0e0e0;min-height:100vh;padding-bottom:120px}.radio{position:fixed;left:0;right:0;bottom:0;background:#262626;border-top:1px solid #444;padding:8px 10px;z-index:9}.radio .row{max-width:700px;margin:0 auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}.radio button{background:#1f8a4c;color:#fff;border:none;border-radius:6px;padding:9px 12px;font-weight:bold;font-size:15px}.radio select{flex:1;min-width:150px;background:#333;color:#e0e0e0;border:1px solid #555;border-radius:6px;padding:8px;font-size:14px}.radio input{width:90px}.radio #rStatus{width:100%;max-width:700px;margin:4px auto 0;font-size:12px;color:#aaa}
 .wrap{max-width:700px;margin:0 auto;padding:16px}h1{color:#3cc47c;font-size:20px;text-align:center;margin-bottom:10px}
 .bar{background:#2b2b2b;border:1px solid #444;border-radius:8px;padding:10px;margin-bottom:12px;font-weight:bold;
 font-size:14px;display:flex;justify-content:space-between}.bar .wrong{color:#ff7777}
@@ -49,6 +50,10 @@ automatically</b>.<br><br>Questions you miss come back <b>first</b> next time.</
 <button class="btn" style="width:100%" onclick="goHome()">Home</button></div></div>
 <div id="study" class="hidden"><div class="bar"><span>Missed questions</span><span id="studyN"></span></div>
 <div id="studylist"></div><button class="btn" style="width:100%;margin-top:12px" onclick="goHome()">Home</button></div></div>
+<div class="radio"><div class="row"><button onclick="rPick(rs.i-1)" aria-label="Previous station">&laquo;</button>
+<button id="rPlay" onclick="rToggle()">Play</button><button onclick="rPick(rs.i+1)" aria-label="Next station">&raquo;</button>
+<select id="rSel" aria-label="Station"></select><input id="rVol" type="range" min="0" max="100" aria-label="Volume"></div>
+<div id="rStatus"></div><audio id="radio" preload="none"></audio></div>
 <script>
 const BANK=__BANK__;
 const MAX_WRONG=__MAX_WRONG__;const REVEAL_MS=__REVEAL_MS__;const KEY='atl_tax_stats';
@@ -94,7 +99,23 @@ function resetAll(){if(confirm('Erase all progress and missed-question memory?')
 function show(id){['home','quiz','result','study'].forEach(x=>document.getElementById(x).classList.add('hidden'));
  document.getElementById(id).classList.remove('hidden');window.scrollTo(0,0)}
 function goHome(){show('home')}
-</script></body></html>
+const STATIONS=__STATIONS__;const RKEY='atl_radio';const radio=document.getElementById('radio');
+let rs={i:0,v:__RVOL__},rUrl=0,rOn=false;try{const s=JSON.parse(localStorage.getItem(RKEY));if(s&&s.i>=0&&s.i<STATIONS.length)rs.i=s.i;if(s&&s.v>=0&&s.v<=100)rs.v=s.v}catch(e){}
+function rSave(){localStorage.setItem(RKEY,JSON.stringify(rs))}
+function rSay(t){document.getElementById('rStatus').textContent=t}
+function rLoad(){radio.src=STATIONS[rs.i].u[rUrl];if(rOn){rSay('Connecting to '+STATIONS[rs.i].n+'...');radio.play().catch(()=>{})}}
+function rPick(i){rs.i=(i+STATIONS.length)%STATIONS.length;rUrl=0;document.getElementById('rSel').value=rs.i;rSave();rLoad()}
+function rToggle(){rOn=!rOn;document.getElementById('rPlay').textContent=rOn?'Stop':'Play';
+ if(rOn){rLoad()}else{radio.pause();radio.removeAttribute('src');radio.load();rSay('Stopped')}}
+radio.addEventListener('playing',()=>rSay('Playing '+STATIONS[rs.i].n+' - '+STATIONS[rs.i].g));
+radio.addEventListener('waiting',()=>rOn&&rSay('Buffering...'));
+radio.addEventListener('error',()=>{if(!rOn||!radio.getAttribute('src'))return;if(rUrl+1<STATIONS[rs.i].u.length){rUrl++;rLoad();return}
+ rOn=false;document.getElementById('rPlay').textContent='Play';rSay(STATIONS[rs.i].n+' is offline - try another station')});
+(function(){const sel=document.getElementById('rSel');STATIONS.forEach((s,i)=>{const o=document.createElement('option');o.value=i;o.textContent=s.n+' ('+s.d+')';sel.appendChild(o)});
+ sel.value=rs.i;sel.onchange=()=>rPick(+sel.value);const vol=document.getElementById('rVol');vol.value=rs.v;radio.volume=rs.v/100;
+ vol.oninput=()=>{rs.v=+vol.value;radio.volume=rs.v/100;rSave()};rSay(STATIONS[rs.i].g)})();
+</script>
+</body></html>
 """
 
 
@@ -106,6 +127,7 @@ def bank_json(bank: list[dict]) -> str:
 
 def render_html(bank: list[dict]) -> str:
     return (TEMPLATE.replace("__BANK__", bank_json(bank)).replace("__MAX_WRONG__", str(MAX_WRONG)).replace("__REVEAL_MS__", str(REVEAL_SECONDS * 1000))
+            .replace("__STATIONS__", stations_json()).replace("__RVOL__", str(DEFAULT_VOLUME))
             .replace("__TOTAL__", str(len(bank))).replace("__LIMIT1__", str(MAX_WRONG + 1)))
 
 

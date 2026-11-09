@@ -47,3 +47,22 @@ def test_full_flow(qapp, tmp_path):
     assert w.wrong_list.count() > 0
     assert w.export_wrong_questions() is not None
     w.close()
+
+
+def test_radio_bar_at_bottom(qapp, tmp_path):
+    from atl_tax_deed_test.radio import STATIONS
+    w = TaxDeedTestWindow(data_dir=tmp_path, rng=random.Random(3), confirm_dialogs=False)
+    layout = w.centralWidget().layout()
+    assert layout.itemAt(layout.count() - 1).widget() is w.radio
+    assert w.radio.combo.count() == len(STATIONS)
+    w.radio.step(1)
+    assert w.radio.combo.currentIndex() == 1 and w.radio.state.index == 1
+    if w.radio.player is not None:
+        assert w.radio.player.source().isEmpty()  # nothing streams until Play is pressed
+    w.radio.combo.setCurrentIndex(2)
+    assert w.radio.state.index == 2
+    w.radio.volume.setValue(25)
+    w.close()
+    w2 = TaxDeedTestWindow(data_dir=tmp_path, rng=random.Random(3), confirm_dialogs=False)
+    assert w2.radio.combo.currentIndex() == 2 and w2.radio.volume.value() == 25
+    w2.close()

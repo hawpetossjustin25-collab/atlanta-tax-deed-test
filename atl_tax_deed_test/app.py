@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 
 from atl_tax_deed_test.engine import MAX_WRONG, REVEAL_SECONDS, Attempt, ProgressStore, build_order
 from atl_tax_deed_test.question_bank import build_bank, chapter_counts
+from atl_tax_deed_test.radio_widget import RadioWidget
 from atl_tax_deed_test.study_guide import STUDY_GUIDE_HTML
 
 APP_TITLE = "Atlanta Tax Deed & Real Estate Practice Test"
@@ -101,7 +102,13 @@ class TaxDeedTestWindow(QMainWindow):
         self.status_bar = QLabel("Ready - click 'Start Test' when you are ready")
         self.status_bar.setStyleSheet(BAR_STYLES["idle"])
         layout.addWidget(self.status_bar)
+        self.radio = RadioWidget(self.data_dir / "radio.json")
+        layout.addWidget(self.radio)
         self.load_wrong_history()
+
+    def closeEvent(self, event):
+        self.radio.shutdown()
+        super().closeEvent(event)
 
     # ---------- layout ----------
     def _setup_test_tab(self):
