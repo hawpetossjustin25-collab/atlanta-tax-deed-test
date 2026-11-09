@@ -17,6 +17,7 @@ test = ["pytest>=7", "certifi"]
 
 [project.scripts]
 atl-tax-deed-test = "atl_tax_deed_test.app:main"
+atl-radio = "atl_tax_deed_test.radio_app:main"
 
 [tool.setuptools.packages.find]
 include = ["atl_tax_deed_test*"]
