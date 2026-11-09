@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atlanta-tax-deed-test"
+version = "1.0.0"
+description = "Atlanta (Georgia) tax deed sales, real estate and rehab practice test - 1000-question adaptive drill, free forever, works offline"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "hawpetossjustin25-collab"}]
+dependencies = ["PyQt6>=6.0.0"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+atl-tax-deed-test = "atl_tax_deed_test.app:main"
+
+[tool.setuptools.packages.find]
+include = ["atl_tax_deed_test*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

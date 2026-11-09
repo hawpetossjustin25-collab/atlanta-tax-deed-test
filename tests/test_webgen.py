@@ -1,0 +1,23 @@
+import json
+import re
+
+from atl_tax_deed_test.engine import MAX_WRONG
+from atl_tax_deed_test.question_bank import build_bank
+from atl_tax_deed_test.webgen import render_html
+
+
+def test_web_bank_matches_python_bank():
+    html = render_html(build_bank())
+    data = json.loads(re.search(r"const BANK=(\[.*?\]);\n", html, re.S).group(1))
+    bank = build_bank()
+    assert [d["id"] for d in data] == [q["id"] for q in bank]
+    assert all(d["c"] == q["correct"] and d["o"] == q["options"] for d, q in zip(data, bank))
+    assert f"const MAX_WRONG={MAX_WRONG};" in html
+    assert "__" not in html.replace("__proto__", "")
+
+
+def test_no_script_breakout():
+    bank = build_bank()
+    bank[0]["question"] = "</script><b>x"
+    html = render_html(bank)
+    assert html.count("</script>") == 1
