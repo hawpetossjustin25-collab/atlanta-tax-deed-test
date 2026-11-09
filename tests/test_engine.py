@@ -102,3 +102,27 @@ def test_csv_export_and_clear(tmp_path, store, bank):
 def test_bad_option_rejected(store, bank):
     with pytest.raises(ValueError):
         Attempt(bank[:2], store).select(7)
+
+
+def test_wrong_answer_is_scored_and_locked_at_once(store, bank):
+    a = Attempt(bank[:5], store)
+    q = a.question()
+    r = a.answer(wrong_option(q))
+    assert r == {"right": False, "restart": False}
+    assert a.wrong_count == 1 and a.locked[0] and a.scored[0]
+    assert a.answer(q["correct"]) == {"right": None, "restart": False}
+    assert a.answers[0] == wrong_option(q) and a.wrong_count == 1
+
+
+def test_right_answer_not_locked(store, bank):
+    a = Attempt(bank[:5], store)
+    assert a.answer(a.question()["correct"])["right"] is True
+    assert not a.locked[0] and a.wrong_count == 0
+
+
+def test_answer_reports_restart_on_sixteenth_miss(store, bank):
+    a = Attempt(bank, store)
+    for _ in range(MAX_WRONG):
+        assert a.answer(wrong_option(a.question()))["restart"] is False
+        a.move(1)
+    assert a.answer(wrong_option(a.question()))["restart"] is True

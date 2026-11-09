@@ -13,6 +13,7 @@ def test_web_bank_matches_python_bank():
     assert [d["id"] for d in data] == [q["id"] for q in bank]
     assert all(d["c"] == q["correct"] and d["o"] == q["options"] for d, q in zip(data, bank))
     assert f"const MAX_WRONG={MAX_WRONG};" in html
+    assert "const REVEAL_MS=8000;" in html and "function pick(" in html
     assert "__" not in html.replace("__proto__", "")
 
 

@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
     QProgressBar, QPushButton, QRadioButton, QTabWidget, QTextEdit, QVBoxLayout, QWidget,
 )
 
-from atl_tax_deed_test.engine import MAX_WRONG, Attempt, ProgressStore, build_order
+from atl_tax_deed_test.engine import MAX_WRONG, REVEAL_SECONDS, Attempt, ProgressStore, build_order
 from atl_tax_deed_test.question_bank import build_bank, chapter_counts
 from atl_tax_deed_test.study_guide import STUDY_GUIDE_HTML
 
@@ -66,6 +66,8 @@ class TaxDeedTestWindow(QMainWindow):
         self.confirm_dialogs = confirm_dialogs
         self.attempt: Attempt | None = None
         self.restart_delay_ms = 1500
+        self.reveal_ms = REVEAL_SECONDS * 1000
+        self.revealing = False
 
         self.setWindowTitle(APP_TITLE + " - Adaptive")
         self.setGeometry(80, 80, 1000, 800)
@@ -220,14 +222,52 @@ class TaxDeedTestWindow(QMainWindow):
             "padding-left: 30px; " + ("color: #ff6666; font-weight: bold;" if n else "color: #e0e0e0;"))
 
     def on_answer_selected(self, option: int):
-        if not self.attempt or self.attempt.finished:
+        if not self.attempt or self.attempt.finished or self.revealing:
             return
-        if self.attempt.select(option):
-            self.auto_restart()
+        result = self.attempt.answer(option)
         self._update_wrong_label()
+        if result["right"] is False:
+            self.show_reveal(result["restart"])
+        elif result["restart"]:
+            self.auto_restart()
+
+    def show_reveal(self, restart: bool):
+        """Show the right answer for a few seconds after a miss, then move on (or restart)."""
+        a = self.attempt
+        q = a.question()
+        self.revealing = True
+        right = q["options"][q["correct"]]
+        self.question_label.setText(
+            f"Question {a.current + 1} of {a.total}   [{q['chapter']}]\n\n{q['question']}\n\n"
+            f"WRONG - Correct answer: {chr(65 + q['correct'])}. {right}\nWhy: {q['explanation']}")
+        for i, rb in enumerate(self.answer_buttons):
+            rb.setEnabled(False)
+            rb.setStyleSheet("color: #7fd77f; font-weight: bold;" if i == q["correct"] else
+                             ("color: #ff7777;" if i == a.answers[a.current] else ""))
+        for b in (self.prev_button, self.next_button, self.submit_button):
+            b.setEnabled(False)
+        self.status_bar.setText(f"Wrong - study the right answer ({REVEAL_SECONDS} seconds)...")
+        self.status_bar.setStyleSheet(BAR_STYLES["fail"])
+        QTimer.singleShot(self.reveal_ms, lambda: self._after_reveal(restart))
+
+    def _after_reveal(self, restart: bool):
+        self.revealing = False
+        for rb in self.answer_buttons:
+            rb.setEnabled(True)
+            rb.setStyleSheet("")
+        if restart:
+            self.auto_restart()
+            return
+        self.submit_button.setEnabled(True)
+        self.status_bar.setText(f"Test in progress - answer all {self.attempt.total} questions, max {MAX_WRONG} wrong")
+        self.status_bar.setStyleSheet(BAR_STYLES["active"])
+        if self.attempt.current < self.attempt.total - 1:
+            self.move(1)
+        else:
+            self.update_question_display()
 
     def move(self, step: int):
-        if not self.attempt or self.attempt.finished:
+        if not self.attempt or self.attempt.finished or self.revealing:
             return
         if self.attempt.move(step):
             self._update_wrong_label()

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 MAX_WRONG = 15  # the 16th wrong answer restarts the test
+REVEAL_SECONDS = 8  # how long the right answer is shown after a miss
 
 
 @dataclass
@@ -159,6 +160,7 @@ class Attempt:
     answers: list[int] = field(init=False)
     scored: list[bool] = field(init=False)
     scored_right: list[bool] = field(init=False)
+    locked: list[bool] = field(init=False)
     misses: list[Miss] = field(init=False, default_factory=list)
     current: int = 0
     finished: bool = False
@@ -170,6 +172,7 @@ class Attempt:
         self.answers = [-1] * n
         self.scored = [False] * n
         self.scored_right = [False] * n
+        self.locked = [False] * n
 
     @property
     def wrong_count(self) -> int:
@@ -197,7 +200,7 @@ class Attempt:
 
     def select(self, option: int) -> bool:
         """Choose an answer for the current question. Returns True if this forces a restart."""
-        if self.finished or self.restart_needed:
+        if self.finished or self.restart_needed or self.locked[self.current]:
             return self.restart_needed
         if not 0 <= option < len(self.question()["options"]):
             raise ValueError(f"option {option} out of range")
@@ -218,6 +221,17 @@ class Attempt:
                 self.misses = [m if m.number != i + 1 else self._miss(i) for m in self.misses]
             return self._check_limit()
         return False
+
+    def answer(self, option: int) -> dict:
+        """Pick an answer. A wrong pick is scored and locked at once so the right answer can be shown."""
+        if self.finished or self.restart_needed or self.locked[self.current]:
+            return {"right": None, "restart": self.restart_needed}
+        restart = self.select(option)
+        right = option == self.question()["correct"]
+        if not right:
+            restart = self._score(self.current) or restart
+            self.locked[self.current] = True
+        return {"right": right, "restart": restart}
 
     def _score(self, i: int) -> bool:
         if self.scored[i] or self.answers[i] == -1:

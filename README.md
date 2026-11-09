@@ -21,6 +21,7 @@
 ## How the test works
 - Every run shows all 1,000 questions, shuffled.
 - Max 15 wrong; the 16th wrong answer restarts the test instantly.
+- Miss a question and the right answer and explanation are shown for 8 seconds, then the next question comes up.
 - Missed questions come back first, then unseen ones, then ones you know. Progress is saved.
 - Wrong Answers tab with explanations, CSV export, Study Guide tab.
 
