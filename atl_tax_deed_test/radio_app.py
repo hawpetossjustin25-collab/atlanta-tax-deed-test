@@ -250,13 +250,15 @@ class RadioWindow(QMainWindow):
 
 
 def send_to_running(name: str, msg: str) -> bool:
+    """Hand a message to an already-open window (in another process); False if none is running."""
     sock = QLocalSocket()
     sock.connectToServer(name)
-    if not sock.waitForConnected(500):
+    if not sock.waitForConnected(1000):
         return False
     sock.write(msg.encode())
     sock.flush()
     sock.waitForBytesWritten(1000)
+    sock.waitForReadyRead(3000)  # server acks; closing before that can drop the message on Windows pipes
     sock.disconnectFromServer()
     return True
 
@@ -268,12 +270,23 @@ def start_server(name: str, handler) -> QLocalServer:
         raise OSError(server.errorString())
 
     def accept():
-        conn = server.nextPendingConnection()
-        if conn is None:
-            return
-        conn.waitForReadyRead(1000)
-        handler(bytes(conn.readAll()).decode(errors="ignore").strip())
-        conn.disconnectFromServer()
+        while server.hasPendingConnections():
+            conn = server.nextPendingConnection()
+            done = []
+
+            def on_ready(conn=conn, done=done):
+                data = bytes(conn.readAll()).decode(errors="ignore").strip()
+                if not data or done:
+                    return
+                done.append(True)
+                conn.write(b"ok")
+                conn.flush()
+                handler(data)
+                conn.disconnectFromServer()
+
+            conn.readyRead.connect(on_ready)
+            if conn.bytesAvailable():
+                on_ready()
 
     server.newConnection.connect(accept)
     return server

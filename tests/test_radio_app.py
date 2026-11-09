@@ -120,13 +120,22 @@ def test_alarm_settings_saved(qapp, tmp_path, monkeypatch):
 
 def test_second_launch_with_ring_reaches_open_window(qapp, tmp_path):
     from atl_tax_deed_test.radio_app import send_to_running, start_server
+    import subprocess
+    import sys
+    import time
+    name = f"atl-radio-test-{os.getpid()}"
     got = []
-    server = start_server(f"atl-radio-test-{os.getpid()}", got.append)
-    assert send_to_running(f"atl-radio-test-{os.getpid()}", "ring")
-    for _ in range(50):
+    server = start_server(name, got.append)
+    # a real second launch is another process
+    code = ("import sys; from PyQt6.QtCore import QCoreApplication; app = QCoreApplication([]); "
+            "from atl_tax_deed_test.radio_app import send_to_running; "
+            f"sys.exit(0 if send_to_running({name!r}, 'ring') else 3)")
+    proc = subprocess.Popen([sys.executable, "-c", code], cwd=os.path.dirname(os.path.dirname(__file__)))
+    deadline = time.time() + 20
+    while time.time() < deadline and (proc.poll() is None or not got):
         qapp.processEvents()
-        if got:
-            break
+        time.sleep(0.01)
     server.close()
+    assert proc.wait(timeout=5) == 0
     assert got == ["ring"]
     assert not send_to_running(f"atl-radio-none-{os.getpid()}", "ring")
